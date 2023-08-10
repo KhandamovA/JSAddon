@@ -38,6 +38,7 @@
  * @property {number} cArguments Кол-во аргументов
  * @property {Array<VarStruct>} variables Набор переменных для подставки значений
  * @property {string} textcode Код функции в виде текста
+ * @property {Map<string, Map<string, any>>} input входные параметры (id / Набор входных значений ключ / значение)
  */
 
 /**
@@ -53,7 +54,7 @@
 (function (Scratch) {
   'use strict';
   /*
-   * JsAddon extension v2.0 by KhandamovA
+   * JsAddon extension v3.0 by KhandamovA
    */
 
   /**
@@ -138,7 +139,7 @@
       document.body.insertBefore(styleMonitors, document.body.firstChild);
       let convertSC = document.querySelector('.sc-monitor-overlay');
       let wait = 50;
-      if(convertSC != null){
+      if (convertSC != null) {
         wait = 100;
       }
 
@@ -222,9 +223,32 @@
             }
           },
           {
+            opcode: 'js_prepare_arg_func',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'установить у функции [func] аргумент [arg_] в значение [value] набор [kit]',
+            arguments: {
+              value: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: ""
+              },
+              func: {
+                type: Scratch.ArgumentType.STRING,
+                menu: 'get_funcs'
+              },
+              kit: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "main"
+              },
+              arg_: {
+                type: Scratch.ArgumentType.STRING,
+                menu: 'get_func_args'
+              }
+            }
+          },
+          {
             opcode: 'js_exec_code_from_func',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'результат в [variable] из функции [func]',
+            text: 'результат в [variable] из функции [func] использовать набор [kit]',
             arguments: {
               variable: {
                 type: Scratch.ArgumentType.STRING,
@@ -234,16 +258,24 @@
                 type: Scratch.ArgumentType.STRING,
                 menu: 'get_funcs'
               },
+              kit: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "main"
+              },
             }
           },
           {
             opcode: 'js_exec_code_from_func_ret',
             blockType: Scratch.BlockType.REPORTER,
-            text: 'результат из функции [func]',
+            text: 'результат из функции [func] использовать набор [kit]',
             arguments: {
               func: {
                 type: Scratch.ArgumentType.STRING,
                 menu: 'get_funcs'
+              },
+              kit: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: "main"
               },
             }
           },
@@ -329,7 +361,7 @@
           {
             opcode: 'js_json_as_object',
             blockType: Scratch.BlockType.REPORTER,
-            text: '[variable] как объект > параметр [param]',
+            text: '[variable] параметр [param]',
             arguments: {
               variable: {
                 type: Scratch.ArgumentType.STRING,
@@ -355,7 +387,7 @@
           {
             opcode: 'js_json_set_new_key',
             blockType: Scratch.BlockType.COMMAND,
-            text: 'ключ [variable] установить параметр [key] в значение [value]',
+            text: 'ключ [variable] параметр [key] в значение [value]',
             arguments: {
               variable: {
                 type: Scratch.ArgumentType.STRING,
@@ -465,6 +497,17 @@
             opcode: 'js_json_array_lenght',
             blockType: Scratch.BlockType.REPORTER,
             text: 'ключ [variable] длина массива',
+            arguments: {
+              variable: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: 'key'
+              },
+            }
+          },
+          {
+            opcode: 'js_json_object_keys',
+            blockType: Scratch.BlockType.REPORTER,
+            text: 'ключ [variable] массив ключей',
             arguments: {
               variable: {
                 type: Scratch.ArgumentType.STRING,
@@ -861,6 +904,10 @@
             acceptReporters: true,
             items: 'getMutations'
           },
+          get_func_args: {
+            acceptReporters: true,
+            items: 'getFuncArgs'
+          },
           get_widgets: {
             acceptReporters: true,
             items: [
@@ -936,6 +983,53 @@
       }
     }
 
+    getFuncArgs(targetid) {
+      let id = this.getIdFocusBlock();
+      let target = this.getTarget(targetid);
+      if (target != null && id != null) {
+        let blocks = target.blocks._blocks;
+        let block = this.getBlockId(blocks, id);
+        let results = { array: [] };
+        let variable;
+        let key;
+        if (block.success == true) {
+          this.getBlockParams(results, blocks, id);
+        }
+
+
+        console.log(results);
+        if (results.array.length == 4) {
+          if (functions.has(results.array[3])) {
+            let func = functions.get(results.array[3]);
+            let ret = [];
+            for (let i = 0; i < func.variables.length; i++) {
+              if (func.variables[i].where == 3) {
+                ret.push({
+                  text: func.variables[i].variable,
+                  value: func.variables[i].variable
+                });
+              }
+            }
+
+            if (ret.length == 0) {
+              return [{
+                text: 'select a argument',
+                value: 'select a argument'
+              }]
+            }
+
+            return ret;
+          }
+        }
+      }
+
+      return [{
+        text: 'select a argument',
+        value: 'select a argument'
+      }]
+
+    }
+
     getSignals(targetid) {
       let id = this.getIdFocusBlock();
       let target = this.getTarget(targetid);
@@ -953,51 +1047,51 @@
             this.getBlockParams(results, blocks, id);
           }
 
-          if(results.array.length == 2){
-            if(custom_signals.has(results.array[1])){
+          if (results.array.length == 2) {
+            if (custom_signals.has(results.array[1])) {
               let ret = [];
-              custom_signals.get(results.array[1]).forEach(x=>{
+              custom_signals.get(results.array[1]).forEach(x => {
                 ret.push({
-                  text : x,
-                  value : x
+                  text: x,
+                  value: x
                 });
               });
 
-              if(ret.length == 0){
+              if (ret.length == 0) {
                 return [{
-                  text : "select a signal",
-                  text : "select a signal"
+                  text: "select a signal",
+                  text: "select a signal"
                 }];
               }
 
               return ret;
-            }else{
+            } else {
               return [{
-                text : "select a signal",
-                text : "select a signal"
+                text: "select a signal",
+                text: "select a signal"
               }];
             }
-          }else{
+          } else {
             return [{
-              text : "select a signal",
-              text : "select a signal"
+              text: "select a signal",
+              text: "select a signal"
             }];
           }
-        }else{
+        } else {
           return [{
-            text : "select a signal",
-            text : "select a signal"
+            text: "select a signal",
+            text: "select a signal"
           }];
         }
-      }else{
+      } else {
         return [{
-          text : "select a signal",
-          text : "select a signal"
+          text: "select a signal",
+          text: "select a signal"
         }];
       }
     }
 
-    saveCustomSignals(){
+    saveCustomSignals() {
       let e = 0;
       while (true) {
         let index = this.dataStorage.indexOf('$restore_custom_signals', e);
@@ -1010,7 +1104,7 @@
       }
 
       custom_signals.forEach((v, k) => {
-        v.forEach(x=>{
+        v.forEach(x => {
           this.dataStorage.push('$restore_custom_signals');
           this.dataStorage.push(k);
           this.dataStorage.push(x);
@@ -1038,8 +1132,8 @@
     }
 
     js_custom_delete_signal({ signal, channel }) {
-      if(custom_signals.has(channel)){
-        if(custom_signals.get(channel).includes(signal)){
+      if (custom_signals.has(channel)) {
+        if (custom_signals.get(channel).includes(signal)) {
           let index = custom_signals.get(channel).indexOf(signal);
           custom_signals.get(channel).splice(index, 1);
           this.saveCustomSignals();
@@ -1047,17 +1141,17 @@
       }
     }
 
-    js_custom_signal_recieve({signal, channel}){
+    js_custom_signal_recieve({ signal, channel }) {
 
     }
 
-    js_custom_signal_send({signal, channel}){
-      if(custom_signals.has(channel) && custom_signals.get(channel).includes(signal)){
-      vm.runtime.startHats('KhandamovA_js_custom_signal_recieve', {
-        channel,
-        signal
-      });
-    }
+    js_custom_signal_send({ signal, channel }) {
+      if (custom_signals.has(channel) && custom_signals.get(channel).includes(signal)) {
+        vm.runtime.startHats('KhandamovA_js_custom_signal_recieve', {
+          channel,
+          signal
+        });
+      }
     }
 
     js_widgets_all() {
@@ -1142,8 +1236,8 @@
           break;
         }
       }
-      if(include_widgets_save)
-      this.js_widgets_save();
+      if (include_widgets_save)
+        this.js_widgets_save();
     }
 
     js_widgets_set_attribute({ variable, attr, value }) {
@@ -1195,8 +1289,8 @@
           return;
         }
       });
-      if(include_widgets_save)
-      this.js_widgets_save();
+      if (include_widgets_save)
+        this.js_widgets_save();
     }
 
     js_widgets_del_class({ variable, class_ }) {
@@ -1210,8 +1304,8 @@
           return;
         }
       });
-      if(include_widgets_save)
-      this.js_widgets_save();
+      if (include_widgets_save)
+        this.js_widgets_save();
     }
 
     js_widgets_get_class({ variable, class_ }) {
@@ -1228,8 +1322,8 @@
         }
       });
       return ret;
-      if(include_widgets_save)
-      this.js_widgets_save();
+      if (include_widgets_save)
+        this.js_widgets_save();
     }
 
     js_widgets_signal(args, util) {
@@ -1382,8 +1476,8 @@
           }
 
           res[i].appendChild(elem);
-          if(include_widgets_save)
-          this.js_widgets_save();
+          if (include_widgets_save)
+            this.js_widgets_save();
 
           break;
         }
@@ -1583,8 +1677,8 @@
 
 
           res[i].appendChild(elem);
-          if(include_widgets_save)
-          this.js_widgets_save();
+          if (include_widgets_save)
+            this.js_widgets_save();
 
           break;
         }
@@ -1727,7 +1821,7 @@
       }
     }
 
-    js_json_array_lenght({variable}){
+    js_json_array_lenght({ variable }) {
       let keys = variable.split('|');
       if (keys.length >= 1 && jsons_values.has(keys[0])) {
         let json = jsons_values.get(keys[0]);
@@ -1740,6 +1834,7 @@
         }
 
         let k = Object.keys(json);
+
         if (keys.length > 1 && k.includes(keys[keys.length - 1])) {
           if (typeof json[keys[keys.length - 1]] === 'object') {
             return json[keys[keys.length - 1]].length;
@@ -1751,6 +1846,34 @@
         }
       } else {
         return "is not array";
+      }
+    }
+
+    js_json_object_keys({ variable }) {
+      let keys = variable.split('|');
+      if (keys.length >= 1 && jsons_values.has(keys[0])) {
+        let json = jsons_values.get(keys[0]);
+        for (let i = 1; i < keys.length - 1; i++) {
+          if (typeof json[keys[i]] !== 'undefined') {
+            json = json[keys[i]];
+          } else {
+            return "is not object";
+          }
+        }
+
+        let k = Object.keys(json);
+
+        if (keys.length > 1 && k.includes(keys[keys.length - 1])) {
+          if (typeof json[keys[keys.length - 1]] === 'object') {
+            return Object.keys(json[keys[keys.length - 1]]);
+          }
+        } else if (keys.length == 1) {
+          if (typeof json === 'object') {
+            return Object.keys(json);
+          }
+        }
+      } else {
+        return "is not object";
       }
     }
 
@@ -1977,7 +2100,7 @@
       /**
        * Восстановление сохраненых Json-ов, функций и стилей
        */
-      
+
       try {
         for (let i = 0; i < this.dataStorage.length; i++) {
           const v = this.dataStorage[i];
@@ -2024,13 +2147,13 @@
               elem.innerHTML = style;
             }
             i += 1;
-          }else if(v == '$restore_custom_signals'){
+          } else if (v == '$restore_custom_signals') {
             let channel = this.dataStorage[i + 1];
             let signal = this.dataStorage[i + 2];
-            if(!custom_signals.has(channel)){
+            if (!custom_signals.has(channel)) {
               custom_signals.set(channel, []);
             }
-            if(!custom_signals.get(channel).includes(signal)){
+            if (!custom_signals.get(channel).includes(signal)) {
               custom_signals.get(channel).push(signal);
             }
             i += 2;
@@ -2265,7 +2388,7 @@
 
     getVars(targetid) {
       const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.type != 'list' && x.type != 'broadcast_msg');
-      const localVars = Object.values(vm.editingTarget.variables).filter(x => x.type != 'list' != 'broadcast_msg');
+      const localVars = Object.values(vm.editingTarget.variables).filter(x => x.type != 'list' && x.type != 'broadcast_msg');
       const uniqueVars = [...new Set([...globalVars, ...localVars])];
       if (uniqueVars.length === 0) {
         return [
@@ -2505,28 +2628,36 @@
       }
     }
 
-    js_exec_code(args) {
-      // console.log(args.js);
+    /**
+     * Создание функции из текста на "лету"
+     * @param {string} js Код функции
+     * @returns {FuncStruct}
+     */
+    createFunction(js) {
       try {
-        // console.log(args);
-        let js = args.js + '';
+
+        let jscode = js;
+        let vars_ = new Array;
+
         let n = 0; let e = 0;
         let className = '';
         let argument = '';
         let cond = -1;
         let scodeEnd = -1;
+        let counter = 0;
         while (true) {
           //let g = new GVar(\'my variable\'); let l = new LVar(\'my variable\'); return \'hello JavaScript! \' + g + \' \' + l;
           n = js.indexOf('new', e);
           e = n;
           // console.log('new find', n);
           if (n != -1) {
-            let cls1 = js.indexOf('(');
-            let cls2 = js.indexOf(';');
-            let cls3 = js.indexOf(' ');
+            let cls1 = js.indexOf('(', e);
+            let cls2 = js.indexOf(';', e);
+            let cls3 = js.indexOf(' ', e);
             let cls4 = js.length;
 
-            if (cls1 != -1) {
+            
+            if (cls1 != -1 && cls1 < cls2 && cls1 < cls4) {
               className = js.substring(n + 4, cls1);
               className = className.replace(' ', '');
               scodeEnd = js.indexOf(')', cls1);
@@ -2560,156 +2691,203 @@
 
             if (begA != -1 && endA != -1 && begA < scodeEnd && endA < scodeEnd) {
               argument = js.substring(begA + 1, endA);
+              js = this.replaceSubstringByIndex(js, n, scodeEnd, '____' + counter);
+              counter++;
             } else if (begA2 != -1 && endA2 != -1 && begA2 < scodeEnd && endA2 < scodeEnd) {
               argument = js.substring(begA2 + 1, endA2);
+              js = this.replaceSubstringByIndex(js, n, scodeEnd, '____' + counter);
+              counter++;
             } else {
               e = js.length;
             }
 
+
             if (className == 'GVar') {
-              const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.name == argument);
-              // console.log('setValue', globalVars);
-              if (globalVars.length > 0) {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, "\"" + globalVars[0].value + "\"")
-              } else {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '\'\'');
-              }
+              const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.name == argument && x.type != 'broadcast_msg');
+              vars_.push({
+                variable: globalVars.length > 0 ? globalVars[0].id : 'error',
+                index: counter - 1,
+                where: 0
+              });
+
+
             } else if (className == 'LVar') {
-              const localVars = Object.values(vm.editingTarget.variables).filter(x => x.name == argument);
-              if (localVars.length > 0) {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, "\"" + localVars[0].value + "\"")
-              } else {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '\'\'');
-              }
+              const localVars = Object.values(vm.editingTarget.variables).filter(x => x.name == argument && x.type != 'broadcast_msg');
+              vars_.push({
+                variable: localVars.length > 0 ? localVars[0].id : 'error',
+                index: counter - 1,
+                where: 1
+              });
+
+
+            } else if (className == 'JVar') {
+              vars_.push({
+                variable: argument,
+                index: counter - 1,
+                where: 2
+              });
+
+
+            } else if (className == 'Arg') {
+              vars_.push({
+                variable: argument,
+                index: counter - 1,
+                where: 3
+              });
+
+
             }
             // console.log('argument', argument);
 
             className = '';
           }
         }
+
+
         // console.log('itog', js);
 
-        let func = new Function(js);
-        if (args.js.includes('return')) {
-          const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == args.variable);
-          // console.log('vars', vm.editingTarget.variables);
-          let answer = func();
-          if (!this.isFloat(answer)) {
-            // answer = answer;
-          }
-          if (globalVars.length > 0) {
-            vm.runtime.getTargetForStage().variables[args.variable].value = answer;
-          } else {
-            vm.editingTarget.variables[args.variable].value = answer;
-          }
-          return 'successful';
+        let func = new Function('____0', '____1', '____2', '____3', '____4', '____5', '____6', '____7', '____8', '____9', '____10', '____11', '____12', '____13', '____14', '____15'
+          , '____16', '____17', '____18', '____19', '____20', '____21', '____22', '____23', '____24', '____25', '____26', '____27', '____28', '____29', '____30', '____31', js).bind(this);
+
+        /**
+        * @type {FuncStruct}
+        */
+        let result = null;
+
+        if (vars_.length > 32) {
+          result = {
+            success: false,
+            exec: () => { return 'error'; },
+            isReturned: js.includes('return'),
+            cArguments: vars_.length,
+            variables: vars_,
+            textcode: jscode,
+            input: new Map
+          };
         } else {
-          func();
+          result = {
+            success: true,
+            exec: func,
+            isReturned: js.includes('return'),
+            cArguments: vars_.length,
+            variables: vars_,
+            textcode: jscode,
+            input: new Map
+          };
         }
+
+        return result;
+
       } catch {
-        return 'error';
+        return null;
       }
-      return 'error';
+      return null;
+    }
+
+    /**
+     * Выполнение объекта функции
+     * @param {FuncStruct} e 
+     * @returns {string|number|object}
+     */
+    returnResultFromFunction(e, kit = null) {
+      if (e == undefined) {
+        return undefined;
+      }
+
+      if (e.success) {
+        let args_ = new Array;
+        try {
+          for (let i = 0; i < e.variables.length; i++) {
+            let v;
+            let where = e.variables[i].where;
+            let variable = e.variables[i].variable;
+            if (where == 0) {
+              //Глобальная переменная
+              v = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == variable);
+            } else if (where == 1) {
+              //Локальная переменная
+              v = Object.values(vm.editingTarget.variables).filter(x => x.id == variable);
+            } else if (where == 2) {
+              //JSON переменная
+              v = jsons_values.get(variable);
+            } else if (where == 3) {
+              v = 'none';
+              if (kit != null) {
+                if (e.input.has(kit)) {
+                  let kit__ = e.input.get(kit);
+                  if (kit__.has(variable)) {
+                    v = kit__.get(variable);
+                  }
+                }
+              }
+            }
+
+            if ((where == 0 || where == 1) && v.length > 0) {
+              args_.push(v[0]);
+            } else if (where == 2 || where == 3) {
+              args_.push(v);
+            } else {
+              args_.push("\"none\"");
+            }
+          }
+
+          let ans = e.exec(...args_);
+
+          if (e.isReturned) {
+            return ans;
+          } else {
+            return "success";
+          }
+
+        } catch {
+          return "error";
+        }
+        return "";
+      }
+    }
+
+    /**
+     * Установка входного аргумента у функции
+     * @param {string} argKey 
+     * @param {any} argValue 
+     * @param {string} id 
+     * @param {FuncStruct} e 
+     */
+    bindArgToFunction(argKey, argValue, id, e) {
+      if (!e.input.has(id)) {
+        e.input.set(id, new Map);
+      }
+
+      e.input.get(id).set(argKey, argValue);
+    }
+
+    js_prepare_arg_func({ func, arg_, value, kit }) {
+      if (functions.has(func)) {
+        this.bindArgToFunction(arg_, value, kit, functions.get(func));
+      }
+    }
+
+    js_exec_code(args) {
+
+      let func = this.createFunction(args.js);
+      let ans = this.returnResultFromFunction(func);
+
+      if (func.isReturned) {
+        const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == args.variable);
+
+        if (globalVars.length > 0) {
+          vm.runtime.getTargetForStage().variables[args.variable].value = ans;
+        } else {
+          vm.editingTarget.variables[args.variable].value = ans;
+        }
+      }
     }
 
     js_exec_code_ret(args) {
-      // console.log(args);
-      try {
-        // console.log(args);
-        let js = args.js + '';
-        let n = 0; let e = 0;
-        let className = '';
-        let argument = '';
-        let cond = -1;
-        let scodeEnd = -1;
-        while (true) {
-          //let g = new GVar(\'my variable\'); let l = new LVar(\'my variable\'); return \'hello JavaScript! \' + g + \' \' + l;
-          n = js.indexOf('new', e);
-          e = n;
-          // console.log('new find', n);
-          if (n != -1) {
-            let cls1 = js.indexOf('(');
-            let cls2 = js.indexOf(';');
-            let cls3 = js.indexOf(' ');
-            let cls4 = js.length;
+      let func = this.createFunction(args.js);
+      let ans = this.returnResultFromFunction(func);
 
-            if (cls1 != -1) {
-              className = js.substring(n + 4, cls1);
-              className = className.replace(' ', '');
-              scodeEnd = js.indexOf(')', cls1);
-              cond = cls1;
-              if (scodeEnd == -1) {
-                break;
-              }
-            } else if (cls2 != -1) {
-              e = cls2;
-              continue;
-            } else if (cls3 != -1) {
-              e = cls3;
-              continue;
-            } else {
-              break;
-            }
-          } else {
-            break;
-          }
-
-          // console.log('classname', className, 'new var', Scratch);
-
-          if (cond != -1) {
-            let begA = js.indexOf('\'', cond);
-            let endA = js.indexOf('\'', begA + 1);
-            let begA2 = js.indexOf('\"', cond);
-            let endA2 = js.indexOf('\"', begA2 + 1);
-
-            // console.log('find argument', begA, endA, scodeEnd)
-
-
-            if (begA != -1 && endA != -1 && begA < scodeEnd && endA < scodeEnd) {
-              argument = js.substring(begA + 1, endA);
-            } else if (begA2 != -1 && endA2 != -1 && begA2 < scodeEnd && endA2 < scodeEnd) {
-              argument = js.substring(begA2 + 1, endA2);
-            } else {
-              e = js.length;
-            }
-
-            if (className == 'GVar') {
-              const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.name == argument);
-              // console.log('setValue', globalVars);
-              if (globalVars.length > 0) {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, "\"" + globalVars[0].value + "\"");
-              } else {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '\'none\'');
-              }
-            } else if (className == 'LVar') {
-              const localVars = Object.values(vm.editingTarget.variables).filter(x => x.name == argument);
-              if (localVars.length > 0) {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, "\"" + localVars[0].value + "\"");
-              } else {
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '\'none\'');
-              }
-            }
-            // console.log('argument', argument);
-
-            className = '';
-          }
-        }
-        // console.log('itog', js);
-
-        let func = new Function(js);
-        if (args.js.includes('return')) {
-          const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == args.variable);
-          // console.log('vars', vm.editingTarget.variables);
-          let answer = func();
-          return answer;
-        } else {
-          func();
-          return "function not returned";
-        }
-      } catch {
-        return 'error';
-      }
-      return 'error';
+      return ans;
     }
 
     js_init_func(args) {
@@ -2726,121 +2904,11 @@
       if (access) {
         try {
 
-          let vars_ = new Array;
+          let result = this.createFunction(args.js);
 
-          let js = args.js + '';
-          let n = 0; let e = 0;
-          let className = '';
-          let argument = '';
-          let cond = -1;
-          let scodeEnd = -1;
-          let counter = 0;
-          while (true) {
-            //let g = new GVar(\'my variable\'); let l = new LVar(\'my variable\'); return \'hello JavaScript! \' + g + \' \' + l;
-            n = js.indexOf('new', e);
-            e = n;
-            // console.log('new find', n);
-            if (n != -1) {
-              let cls1 = js.indexOf('(');
-              let cls2 = js.indexOf(';');
-              let cls3 = js.indexOf(' ');
-              let cls4 = js.length;
-
-              if (cls1 != -1) {
-                className = js.substring(n + 4, cls1);
-                className = className.replace(' ', '');
-                scodeEnd = js.indexOf(')', cls1);
-                cond = cls1;
-                if (scodeEnd == -1) {
-                  break;
-                }
-              } else if (cls2 != -1) {
-                e = cls2;
-                continue;
-              } else if (cls3 != -1) {
-                e = cls3;
-                continue;
-              } else {
-                break;
-              }
-            } else {
-              break;
-            }
-
-            // console.log('classname', className, 'new var', Scratch);
-
-            if (cond != -1) {
-              let begA = js.indexOf('\'', cond);
-              let endA = js.indexOf('\'', begA + 1);
-              let begA2 = js.indexOf('\"', cond);
-              let endA2 = js.indexOf('\"', begA2 + 1);
-
-              // console.log('find argument', begA, endA, scodeEnd)
-
-
-              if (begA != -1 && endA != -1 && begA < scodeEnd && endA < scodeEnd) {
-                argument = js.substring(begA + 1, endA);
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '____' + counter);
-                counter++;
-              } else if (begA2 != -1 && endA2 != -1 && begA2 < scodeEnd && endA2 < scodeEnd) {
-                argument = js.substring(begA2 + 1, endA2);
-                js = this.replaceSubstringByIndex(js, n, scodeEnd, '____' + counter);
-                counter++;
-              } else {
-                e = js.length;
-              }
-
-
-              if (className == 'GVar') {
-                const globalVars = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.name == argument);
-                vars_.push({
-                  variable: globalVars.length > 0 ? globalVars[0].id : 'error',
-                  index: counter - 1,
-                  where: 0
-                });
-
-
-              } else if (className == 'LVar') {
-                const localVars = Object.values(vm.editingTarget.variables).filter(x => x.name == argument);
-                vars_.push({
-                  variable: localVars.length > 0 ? localVars[0].id : 'error',
-                  index: counter - 1,
-                  where: 1
-                });
-              }
-              // console.log('argument', argument);
-
-              className = '';
-            }
+          if (result != null) {
+            functions.set(args.name, result);
           }
-
-
-          // console.log('itog', js);
-
-          let func = new Function('____0', '____1', '____2', '____3', '____4', '____5', '____6', '____7', '____8', '____9', '____10', '____11', '____12', '____13', '____14', '____15'
-            , '____16', '____17', '____18', '____19', '____20', '____21', '____22', '____23', '____24', '____25', '____26', '____27', '____28', '____29', '____30', '____31', js).bind(this);
-
-          if (vars_.length > 32) {
-            functions.set(args.name, {
-              success: false,
-              exec: () => { return 'error'; },
-              isReturned: js.includes('return'),
-              cArguments: vars_.length,
-              variables: vars_,
-              textcode: args.js
-            });
-          } else {
-            functions.set(args.name, {
-              success: true,
-              exec: func,
-              isReturned: js.includes('return'),
-              cArguments: vars_.length,
-              variables: vars_,
-              textcode: args.js
-            });
-          }
-
-
 
         } catch {
           return 'failed';
@@ -2861,38 +2929,7 @@
       if (functions.has(args.func)) {
         const e = functions.get(args.func);
 
-        if (e.success) {
-          let args_ = new Array;
-
-          try {
-            for (let i = 0; i < e.variables.length; i++) {
-              let v;
-              if (e.variables[i].where == 0) {
-                v = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == e.variables[i].variable);
-              } else {
-                v = Object.values(vm.editingTarget.variables).filter(x => x.id == e.variables[i].variable);
-              }
-
-              if (v.length > 0) {
-                args_.push(v[0].value);
-              } else {
-                args_.push("\"none\"");
-              }
-            }
-
-            let ans = e.exec(...args_);
-
-            if (e.isReturned) {
-              return ans;
-            } else {
-              return "success";
-            }
-
-          } catch {
-            return "error";
-          }
-          return "";
-        }
+        return this.returnResultFromFunction(e, args.kit);
       } else {
         return "error";
       }
@@ -2904,48 +2941,23 @@
       if (functions.has(args.func)) {
         const e = functions.get(args.func);
 
-        if (e.success) {
-          let args_ = new Array;
+        let ans = this.returnResultFromFunction(e, args.kit);
 
-          try {
-            for (let i = 0; i < e.variables.length; i++) {
-              let v;
-              if (e.variables[i].where == 0) {
-                v = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == e.variables[i].variable);
-              } else {
-                v = Object.values(vm.editingTarget.variables).filter(x => x.id == e.variables[i].variable);
-              }
-
-              if (v.length > 0) {
-                args_.push(v[0].value);
-              } else {
-                args_.push("\"none\"");
-              }
-            }
-
-            let ans = e.exec(...args_);
-
-            const v2 = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == args.variable);
-            if (v2.length > 0) {
-              if (e.isReturned) {
-                vm.runtime.getTargetForStage().variables[args.variable].value = ans;
-              } else {
-
-              }
-            } else {
-              const v3 = Object.values(vm.editingTarget.variables).filter(x => x.id == args.variable);
-
-              if (e.isReturned) {
-                vm.editingTarget.variables[args.variable].value = ans;
-              } else {
-
-              }
-            }
-          } catch {
+        const v2 = Object.values(vm.runtime.getTargetForStage().variables).filter(x => x.id == args.variable);
+        if (v2.length > 0) {
+          if (e.isReturned) {
+            vm.runtime.getTargetForStage().variables[args.variable].value = ans;
+          } else {
 
           }
+        } else {
+          const v3 = Object.values(vm.editingTarget.variables).filter(x => x.id == args.variable);
 
+          if (e.isReturned) {
+            vm.editingTarget.variables[args.variable].value = ans;
+          } else {
 
+          }
         }
       }
     }
