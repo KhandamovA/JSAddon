@@ -1232,7 +1232,7 @@
     }
 
     js_preload_remove({name}){
-      if(!preload_modules.has(name)){
+      if(preload_modules.has(name)){
         let curr = preload_modules.get(name);
         let elem = document.querySelector('.preloadJSAddon-' + curr.id);
         if(elem != null){
