@@ -2721,6 +2721,11 @@
 
 
             } else if (className == 'JVar') {
+              
+              if(!jsons_values.has(argument)){
+                jsons_values.set(argument, {});
+              }
+
               vars_.push({
                 variable: argument,
                 index: counter - 1,
