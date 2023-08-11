@@ -1226,7 +1226,7 @@
 
       elem = document.createElement("script");
       elem.innerHTML = js;
-      elem.classList.add('.preloadJSAddon-' + curr.id);
+      elem.classList.add('preloadJSAddon-' + curr.id);
       document.body.insertBefore(elem, document.body.firstChild);
       this.SavePreloadModules();
     }
