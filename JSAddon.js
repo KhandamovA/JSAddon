@@ -5,6 +5,10 @@
  */
 
 /**
+ * @typedef {string} ModuleName 
+ */
+
+/**
  * @typedef {Array<string>} CustomSignals Набор пользовательских сигналов
  */
 
@@ -51,10 +55,16 @@
  * @property {string} source Источник данных в виде идентификатора массива для некоторых типов виджетов
  */
 
+/**
+ * @typedef {Object} PreloadModule
+ * @property {string} js
+ * @property {number} id
+ */
+
 (function (Scratch) {
   'use strict';
   /*
-   * JsAddon extension v3.0 by KhandamovA
+   * JsAddon extension v4.0 by KhandamovA
    */
 
   /**
@@ -81,6 +91,11 @@
    * @type {Map<Channel, CustomSignals>} Набор пользовательских каналов с сигналами
    */
   let custom_signals = new Map;
+
+  /**
+   * @type {Map<ModuleName, PreloadModule>} Набор модулей которые подгружаются в HTML в виде js кода
+   */
+  let preload_modules = new Map;
 
   /**
    * @type {HTMLElement} HTML элемент находящийся под курсором мыши
@@ -152,6 +167,41 @@
         name: 'JsAddon',
         color1: '#4d0092',
         blocks: [
+          "---",
+          labelblock('JS Модули предзагрузки проекта'),
+          {
+            opcode: 'js_preload_add',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'загрузить js модуль [js] под именем [name]',
+            arguments: {
+              name: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: 'preload_module'
+              },
+              js: {
+                type: Scratch.ArgumentType.STRING,
+                defaultValue: 'alert("module is loaded!");'
+              },
+            }
+          },
+          {
+            opcode: 'js_preload_remove',
+            blockType: Scratch.BlockType.COMMAND,
+            text: 'удалить модуль [name] из предзагрузки',
+            arguments: {
+              name: {
+                type: Scratch.ArgumentType.STRING,
+                menu: 'get_preload'
+              },
+            }
+          },
+          {
+            opcode: 'js_preload_all',
+            blockType: Scratch.BlockType.REPORTER,
+            text: 'модули предзагрузки',
+            arguments: {
+            }
+          },
           "---",
           labelblock('JS'),
           {
@@ -908,6 +958,10 @@
             acceptReporters: true,
             items: 'getFuncArgs'
           },
+          get_preload: {
+            acceptReporters: true,
+            items: 'getPreload'
+          },
           get_widgets: {
             acceptReporters: true,
             items: [
@@ -980,6 +1034,24 @@
         });
 
         return ret;
+      }
+    }
+
+    getPreload(){
+      if(preload_modules.size > 0){
+        let ret = [];
+        preload_modules.forEach((v, k) => {
+          ret.push({
+            text: k,
+            value: k
+          })
+        });
+        return ret;
+      }else{
+        return [{
+          text: "select a module",
+          value: "select a module"
+        }]
       }
     }
 
@@ -1110,6 +1182,78 @@
           this.dataStorage.push(x);
         });
       });
+    }
+
+    SavePreloadModules(){
+      let e = 0;
+      while (true) {
+        let index = this.dataStorage.indexOf('$restore_preload_module', e);
+        e = index;
+        if (index == -1) {
+          break;
+        } else {
+          this.dataStorage.splice(index, 4);
+        }
+      }
+
+      preload_modules.forEach((v, k) => {
+        this.dataStorage.push('$restore_preload_module');
+        this.dataStorage.push(k);
+        this.dataStorage.push(v.id);
+        this.dataStorage.push(v.js);
+      });
+    }
+
+    js_preload_add({name, js}){
+      if(!preload_modules.has(name)){
+        preload_modules.set(name, {
+          js : js,
+          id : preload_modules.size + 1
+        })
+      }else{
+        preload_modules.set(name, {
+          js : js,
+          id : preload_modules.get(name).id
+        })
+      }
+
+      let curr = preload_modules.get(name);
+
+      let elem = document.querySelector('.preloadJSAddon-' + curr.id);
+      if(elem != null){
+        elem.remove();
+      }
+
+      elem = document.createElement("script");
+      elem.innerHTML = js;
+      elem.classList.add('.preloadJSAddon-' + curr.id);
+      document.body.insertBefore(elem, document.body.firstChild);
+      this.SavePreloadModules();
+    }
+
+    js_preload_remove({name}){
+      if(!preload_modules.has(name)){
+        let curr = preload_modules.get(name);
+        let elem = document.querySelector('.preloadJSAddon-' + curr.id);
+        if(elem != null){
+          elem.remove();
+        }
+        preload_modules.delete(name);
+        this.SavePreloadModules();
+      }
+    }
+
+    js_preload_all(){
+      let ret = '';
+      let i = 0;
+      preload_modules.forEach((v, k) => {
+        if(i == 0){
+          ret += k;
+        }else{
+          ret += ", " + k;
+        }
+      });
+      return ret;
     }
 
     js_custom_signal_create_channel({ channel }) {
@@ -2157,6 +2301,11 @@
               custom_signals.get(channel).push(signal);
             }
             i += 2;
+          }else if(v == '$restore_preload_module'){
+            let name = this.dataStorage[i + 1];
+            let id = this.dataStorage[i + 2];
+            let js = this.dataStorage[i + 3];
+            this.js_preload_add({name, js});
           }
         }
 
