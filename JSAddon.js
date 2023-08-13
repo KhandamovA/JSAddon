@@ -1576,6 +1576,7 @@
           if (widget == 'button') {
             let var_ = this.getVariableData(variable);
             var_.value = elem.value;
+            elem.setAttribute('widget-var', var_.name);
             elem.addEventListener('click', () => {
               vm.runtime.startHats('KhandamovA_js_widgets_signal', {
                 sender: variable
@@ -1590,6 +1591,7 @@
             })
           } else if (widget == 'text') {
             let var_ = this.getVariableData(variable);
+            elem.setAttribute('widget-var', var_.name);
             elem.addEventListener('keyup', (event) => {
               var_.value = elem.value;
               if (event.code === 'Enter') {
@@ -1608,6 +1610,7 @@
             })
           } else if (widget == 'checkbox') {
             let var_ = this.getVariableData(variable);
+            elem.setAttribute('widget-var', var_.name);
             elem.addEventListener('click', () => {
               var_.value = elem.checked;
               vm.runtime.startHats('KhandamovA_js_widgets_signal', {
@@ -1626,6 +1629,7 @@
             elem.remove();
             elem = document.createElement('div');
             elem.classList.add('khandamovA-mutation-element');
+            elem.setAttribute('widget-var', var_.name);
             elem.innerHTML = value;
             elem.addEventListener('widgetEvent', (event)=>{
               var_.value = event.detail.data;
@@ -1783,6 +1787,7 @@
             }
 
             let var_ = this.getVariableData(variable);
+            elem.setAttribute('widget-var', var_.name);
             elem.addEventListener('change', function (event) {
               var_.value = event.target.value;
               const selectedValue = event.target.value;
@@ -1825,6 +1830,7 @@
             }
 
             let var_ = this.getVariableData(variable);
+            elem.setAttribute('widget-var', var_.name);
             elem.addEventListener('change', function (event) {
               var_.value = event.target.value;
               const selectedValue = event.target.value;
