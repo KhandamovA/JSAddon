@@ -976,6 +976,10 @@
               {
                 text: 'checkbox',
                 value: 'checkbox'
+              },
+              {
+                text: 'div',
+                value: 'div'
               }
             ]
           },
@@ -1606,6 +1610,25 @@
             let var_ = this.getVariableData(variable);
             elem.addEventListener('click', () => {
               var_.value = elem.checked;
+              vm.runtime.startHats('KhandamovA_js_widgets_signal', {
+                sender: variable
+              });
+            });
+            mutations.set(var_.name, {
+              id: var_.id,
+              element: elem,
+              widget: widget,
+              style: style,
+              value: value
+            });
+          } else if (widget == 'div'){
+            let var_ = this.getVariableData(variable);
+            elem.remove();
+            elem = document.createElement('div');
+            elem.classList.add('khandamovA-mutation-element');
+            elem.innerHTML = value;
+            elem.addEventListener('widgetEvent', (event)=>{
+              var_.value = event.detail.data;
               vm.runtime.startHats('KhandamovA_js_widgets_signal', {
                 sender: variable
               });
