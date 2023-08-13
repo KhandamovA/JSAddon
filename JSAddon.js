@@ -137,6 +137,17 @@
 
   class JSAddon {
     getInfo() {
+      let isInited = document.querySelector('.KhandamovA-JSAddon-inited');
+
+      if(isInited == null){
+
+
+        isInited = document.createElement('input');
+        isInited.classList.add('KhandamovA-JSAddon-inited');
+        isInited.type = 'hidden';
+
+        document.body.insertBefore(isInited, document.body.firstChild);
+
       let styleMonitorsExist = document.querySelector('.KhandamovA-monitors-style');
       let styleMonitors = styleMonitorsExist;
 
@@ -166,7 +177,7 @@
 
       setTimeout(() => {
         this.init({ styleMonitors });
-      }, wait);
+      }, wait);}
 
       return {
         id: 'KhandamovA',
