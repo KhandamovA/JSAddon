@@ -137,7 +137,13 @@
 
   class JSAddon {
     getInfo() {
-      let styleMonitors = document.createElement('style');
+      let styleMonitorsExist = document.querySelector('.KhandamovA-monitors-style');
+      let styleMonitors = styleMonitorsExist;
+
+      if(styleMonitorsExist == null){
+         styleMonitors = document.createElement('style');
+         styleMonitors.classList.add('KhandamovA-monitors-style');
+      }
 
       styleMonitors.innerHTML =
         "[class^='monitor_monitor-container'] {" +
@@ -1505,6 +1511,7 @@
     }
 
     js_widgets_mutation({ variable, widget, style, value }) {
+      
       let res = document.querySelectorAll('[class^="monitor_monitor-container"]');
 
       let res_integration = document.querySelectorAll('[class^="sc-monitor-root"]');
@@ -1628,6 +1635,7 @@
             let var_ = this.getVariableData(variable);
             elem.remove();
             elem = document.createElement('div');
+            elem.id = 'm' + variable;
             elem.classList.add('khandamovA-mutation-element');
             elem.setAttribute('widget-var', var_.name);
             elem.innerHTML = value;
@@ -2317,7 +2325,7 @@
               elem.innerHTML = this.dataStorage[i + 1];
               document.body.insertBefore(elem, document.body.firstChild);
             } else {
-              elem.innerHTML = style;
+              elem.innerHTML = this.dataStorage[i + 1];
             }
             i += 1;
           } else if (v == '$restore_custom_signals') {
